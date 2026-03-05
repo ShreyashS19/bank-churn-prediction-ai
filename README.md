@@ -1,4 +1,3 @@
-
 # 🧠 AI-Powered Bank Customer Churn Prediction
 
 > Predict customer churn with **Explainable AI**, visualize insights with **interactive dashboards**, and generate **AI-driven interpretations**.
@@ -7,55 +6,60 @@ An **end-to-end full stack Machine Learning application** that predicts whether 
 
 The system combines:
 
-* **Machine Learning (ExtraTreesClassifier)**
-* **Explainable AI (SHAP)**
-* **LLM-powered explanations (Groq / Llama 3.3)**
-* **Modern React dashboard**
-* **Flask ML API**
+- **Machine Learning (ExtraTreesClassifier)**
+- **Explainable AI (SHAP)**
+- **LLM-powered explanations (Groq / Llama 3.3)**
+- **Modern React dashboard**
+- **Flask ML API**
 
 ---
 
 # 🚀 Live Capabilities
 
-✔ Upload customer datasets
-✔ Predict churn risk instantly
-✔ Explain predictions with **SHAP Explainable AI**
-✔ Visualize feature importance and distributions
-✔ Generate **AI-driven business explanations**
-✔ Explore individual customer churn drivers
+✔ Upload customer datasets  
+✔ Predict churn risk instantly  
+✔ Explain predictions with **SHAP Explainable AI**  
+✔ Visualize feature importance and distributions  
+✔ Generate **AI-driven business explanations**  
+✔ Explore individual customer churn drivers  
 
 ---
 
 # 🏗️ System Architecture
 
 ```mermaid
-flowchart LR
+flowchart TD
 
-A[User Upload CSV] --> B[React Frontend]
+A[User Uploads CSV File] --> B[React Frontend Validation]
 
-B --> C[Flask Backend API]
+B --> C[Send Data to Backend API]
+C --> D[POST /predict Endpoint]
 
-C --> D[Data Preprocessing]
+D --> E[Data Preprocessing]
+E --> F[Feature Mapping & Cleaning]
 
-D --> E[ML Pipeline]
+F --> G[Machine Learning Pipeline]
+G --> H[ExtraTrees Classifier]
 
-E --> F[ExtraTrees Model]
+H --> I[Churn Prediction + Probability]
 
-F --> G[Predictions + Probabilities]
+I --> J[Return Predictions to Frontend]
 
-G --> H[Background SHAP Computation]
+I --> K[Start Background SHAP Computation]
 
-H --> I[Feature Importance]
+K --> L[Compute SHAP Values]
 
-H --> J[Customer Explanations]
+L --> M[Feature Importance]
+L --> N[SHAP Distribution Data]
+L --> O[Customer-level Explanations]
 
-I --> K[React Dashboard Charts]
+M --> P[Insights Dashboard]
+N --> P
+O --> P
 
-J --> K
+P --> Q[Groq LLM Generates AI Explanation]
 
-K --> L[Groq LLM Interpretation]
-
-L --> M[AI Insights Display]
+Q --> R[Interactive Insights for Users]
 ```
 
 ---
@@ -124,13 +128,13 @@ I --> J[Model Saved]
 
 # 📊 Model Performance
 
-| Metric   | Score                |
-| -------- | -------------------- |
-| Accuracy | **93.39%**           |
-| ROC-AUC  | **0.9679**           |
-| F1 Score | **0.7721**           |
-| Model    | ExtraTreesClassifier |
-| Trees    | 305                  |
+| Metric | Score |
+|------|------|
+| Accuracy | **93.39%** |
+| ROC-AUC | **0.9679** |
+| F1 Score | **0.7721** |
+| Model | ExtraTreesClassifier |
+| Trees | 305 |
 
 ---
 
@@ -139,19 +143,15 @@ I --> J[Model Saved]
 The **Model Insights dashboard** explains predictions using **SHAP values**.
 
 ### Feature Importance
-
 Shows which features contribute most to churn prediction.
 
 ### SHAP Distribution
-
 Displays how feature values affect churn probability.
 
 ### Individual Customer Analysis
-
 Shows **top risk drivers for a specific customer**.
 
 ### AI Interpretation
-
 LLM explains the model behavior in **human language**.
 
 ---
@@ -160,18 +160,18 @@ LLM explains the model behavior in **human language**.
 
 ### 🔮 Smart Churn Prediction
 
-* Upload CSV dataset
-* Predict churn risk
-* Download predictions
+- Upload CSV dataset
+- Predict churn risk
+- Download predictions
 
 ---
 
 ### 🧠 Explainable AI
 
-* SHAP feature importance
-* SHAP scatter plots
-* Customer-level explanations
-* Feature impact visualization
+- SHAP feature importance
+- SHAP scatter plots
+- Customer-level explanations
+- Feature impact visualization
 
 ---
 
@@ -181,32 +181,32 @@ Powered by **Groq Llama 3.3 70B**
 
 Generates:
 
-* Global model insights
-* Customer churn explanations
-* Retention recommendations
+- Global model insights
+- Customer churn explanations
+- Retention recommendations
 
 ---
 
 ### 🎨 Modern Dashboard
 
-* React + TypeScript
-* TailwindCSS UI
-* Recharts data visualizations
-* Dark / Light theme
+- React + TypeScript
+- TailwindCSS UI
+- Recharts data visualizations
+- Dark / Light theme
 
 ---
 
 # 📦 Tech Stack
 
-| Layer          | Technology                 |
-| -------------- | -------------------------- |
-| Frontend       | React 18, TypeScript, Vite |
-| UI             | TailwindCSS, Shadcn UI     |
-| Backend        | Flask                      |
-| ML             | scikit-learn               |
-| Explainability | SHAP                       |
-| Model          | ExtraTreesClassifier       |
-| LLM            | Groq API (Llama 3.3 70B)   |
+| Layer | Technology |
+|------|-------------|
+| Frontend | React 18, TypeScript, Vite |
+| UI | TailwindCSS, Shadcn UI |
+| Backend | Flask |
+| ML | scikit-learn |
+| Explainability | SHAP |
+| Model | ExtraTreesClassifier |
+| LLM | Groq API (Llama 3.3 70B) |
 
 ---
 
@@ -313,15 +313,15 @@ backend/example_output.csv
 
 # 🔌 API Endpoints
 
-| Endpoint                 | Method | Description                    |
-| ------------------------ | ------ | ------------------------------ |
-| `/predict`               | POST   | Upload CSV and get predictions |
-| `/download`              | GET    | Download prediction CSV        |
-| `/metrics`               | GET    | Model performance              |
-| `/feature-importance`    | GET    | SHAP feature importance        |
-| `/shap-distribution`     | GET    | SHAP scatter plot data         |
-| `/customer-explanation`  | POST   | Explain one customer           |
-| `/global-interpretation` | GET    | AI-generated insights          |
+| Endpoint | Method | Description |
+|--------|--------|-------------|
+| `/predict` | POST | Upload CSV and get predictions |
+| `/download` | GET | Download prediction CSV |
+| `/metrics` | GET | Model performance |
+| `/feature-importance` | GET | SHAP feature importance |
+| `/shap-distribution` | GET | SHAP scatter plot data |
+| `/customer-explanation` | POST | Explain one customer |
+| `/global-interpretation` | GET | AI-generated insights |
 
 ---
 
@@ -333,19 +333,16 @@ Create `.env` inside backend:
 GROQ_API_KEY=your_api_key_here
 ```
 
-
 ---
 
-<!-- # 📸 Screenshots
+# 📸 Screenshots
 
-*(Add screenshots here after deployment)* -->
+*(Add screenshots after deployment)*
 
-```
-Dashboard
-Feature Importance
-Customer Explanation
-SHAP Distribution
-```
+Dashboard  
+Feature Importance  
+Customer Explanation  
+SHAP Distribution  
 
 ---
 
@@ -359,9 +356,9 @@ python save_model.py
 
 This will generate:
 
-* `model.pkl`
-* `model_metrics.json`
-* `shap_values.pkl`
+- `model.pkl`
+- `model_metrics.json`
+- `shap_values.pkl`
 
 ---
 
@@ -369,11 +366,15 @@ This will generate:
 
 Customer churn prediction helps banks:
 
-* Reduce customer loss
-* Improve retention strategies
-* Identify at-risk customers
-* Understand behavior patterns
+- Reduce customer loss
+- Improve retention strategies
+- Identify at-risk customers
+- Understand behavior patterns
 
 Explainable AI ensures that predictions are **transparent and trustworthy**.
 
 ---
+
+# ⭐ Support
+
+If you like this project, consider **starring ⭐ the repository** to support the work!
