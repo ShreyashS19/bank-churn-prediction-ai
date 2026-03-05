@@ -1,0 +1,7 @@
+{
+  "accuracy": 0.9339,
+  "roc_auc": 0.9679,
+  "f1_score": 0.7721,
+  "model": "ExtraTrees",
+  "estimators": 305
+}
