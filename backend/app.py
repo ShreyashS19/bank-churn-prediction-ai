@@ -6,6 +6,7 @@ import os
 import numpy as np
 import uuid
 import threading
+import shap
 
 from preprocess import preprocess_data
 from shap_utils import (
@@ -25,19 +26,26 @@ MODEL_PATH = os.path.join(BASE_DIR, "model.pkl")
 
 model = joblib.load(MODEL_PATH)
 
+# Global SHAP explainer — created ONCE at startup, reused for all requests
+explainer = shap.TreeExplainer(
+    model.named_steps['classifier'],
+    feature_perturbation="tree_path_dependent"
+)
+print("[SHAP] Global TreeExplainer initialized")
+
 # In-memory session store for per-upload SHAP data
 # Key: session_id (str), Value: dict with shap_values, feature_names, X_data, etc.
 sessions = {}
 
 
-def _compute_shap_background(session_id):
+def _compute_shap_background(session_id, shap_explainer):
     """Compute SHAP values in a background thread."""
     session = sessions.get(session_id)
     if not session:
         return
     try:
         df_model = pd.DataFrame(session['df_records'], columns=session['X_columns'])
-        shap_result = compute_shap_for_data(df_model, model)
+        shap_result = compute_shap_for_data(df_model, model, shap_explainer)
         session['shap_values'] = shap_result['shap_values']
         session['feature_names'] = shap_result['feature_names']
         # Store the subsampled X data so distribution indices match SHAP rows
@@ -108,7 +116,7 @@ def _predict_background(session_id, df, df_model, updated_original_columns):
         # Start SHAP background computation
         threading.Thread(
             target=_compute_shap_background,
-            args=(session_id,),
+            args=(session_id, explainer),
             daemon=True
         ).start()
         print(f"[SHAP] Background thread started for session {session_id}")
@@ -348,7 +356,7 @@ def customer_explanation():
 
         df = df[required_columns]
 
-        result = get_customer_explanation(df, model)
+        result = get_customer_explanation(df, model, explainer)
         return jsonify(result)
 
     except Exception as e:

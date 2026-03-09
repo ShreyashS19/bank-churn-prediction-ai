@@ -4,6 +4,8 @@ import numpy as np
 import os
 import shap
 import pandas as pd
+import hashlib
+import threading
 
 # Groq AI (free LLM API — Llama 3.3 70B)
 try:
@@ -14,6 +16,12 @@ except ImportError:
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 METRICS_PATH = os.path.join(BASE_DIR, "model_metrics.json")
+
+# =====================================================
+# SHARED SHAP CACHE — thread-safe, keyed by dataset MD5
+# =====================================================
+_shap_cache = {}
+_shap_cache_lock = threading.Lock()
 
 # =====================================================
 # GROQ AI CONFIGURATION
@@ -68,14 +76,16 @@ def get_model_metrics():
 # CORE: Compute SHAP values for uploaded data
 # =====================================================
 
-def compute_shap_for_data(df, model, max_samples=200):
+def compute_shap_for_data(df, model, explainer, max_samples=40):
     """
     Compute SHAP values for the uploaded DataFrame.
     Aggregates one-hot encoded SHAP back to original features.
+    Uses a shared in-memory cache keyed by dataset MD5 hash.
 
     Args:
         df: DataFrame with model input columns (already preprocessed/renamed)
         model: trained pipeline model
+        explainer: pre-initialized shap.TreeExplainer (global, created once at startup)
         max_samples: max rows to compute SHAP for (performance)
 
     Returns:
@@ -88,18 +98,23 @@ def compute_shap_for_data(df, model, max_samples=200):
     else:
         df_sample = df.copy()
 
+    # Check shared cache
+    dataset_hash = hashlib.md5(df_sample.to_csv(index=False).encode()).hexdigest()
+    with _shap_cache_lock:
+        if dataset_hash in _shap_cache:
+            print(f"[SHAP] Cache hit for hash {dataset_hash[:12]}...")
+            return _shap_cache[dataset_hash]
+
+    print(f"[SHAP] Cache miss for hash {dataset_hash[:12]}..., computing SHAP...")
+
     # Transform through the preprocessing pipeline
     X_transformed = model.named_steps['preprocessing'].transform(df_sample)
 
-    # Compute SHAP values using TreeExplainer on the classifier
-    explainer = shap.TreeExplainer(model.named_steps['classifier'])
-    shap_values_raw = explainer.shap_values(X_transformed)
+    # Compute SHAP values using the pre-initialized global explainer (fast callable API)
+    shap_values_raw = explainer(X_transformed, check_additivity=False).values
 
     # Handle different SHAP output shapes
-    if isinstance(shap_values_raw, list):
-        # Binary classification: list of [class0, class1]
-        shap_vals = shap_values_raw[1]
-    elif isinstance(shap_values_raw, np.ndarray) and shap_values_raw.ndim == 3:
+    if isinstance(shap_values_raw, np.ndarray) and shap_values_raw.ndim == 3:
         # 3D array: (n_samples, n_features, n_classes)
         shap_vals = shap_values_raw[:, :, 1]
     else:
@@ -139,12 +154,18 @@ def compute_shap_for_data(df, model, max_samples=200):
         col_indices = feature_index_map[feat_name]
         aggregated[:, feat_idx] = np.sum(shap_vals[:, col_indices], axis=1)
 
-    return {
+    result = {
         'shap_values': aggregated,
         'feature_names': original_feature_names,
         'X_sampled': df_sample.values,
         'X_sampled_columns': list(df_sample.columns),
     }
+
+    # Store in shared cache
+    with _shap_cache_lock:
+        _shap_cache[dataset_hash] = result
+
+    return result
 
 
 # =====================================================
@@ -246,9 +267,10 @@ def get_shap_distribution_dynamic(shap_values, feature_names, X_data, X_columns)
     return distribution_data
 
 
-def get_customer_explanation(customer_data, model):
+def get_customer_explanation(customer_data, model, explainer):
     """
     Compute SHAP explanation for a single customer.
+    Uses the pre-initialized global explainer for speed.
     """
     # Get prediction probability
     proba = model.predict_proba(customer_data)[0]
@@ -264,13 +286,10 @@ def get_customer_explanation(customer_data, model):
     # Transform data through preprocessing
     X_transformed = model.named_steps['preprocessing'].transform(customer_data)
 
-    # Compute SHAP values
-    explainer = shap.TreeExplainer(model.named_steps['classifier'])
-    shap_values_raw = explainer.shap_values(X_transformed)
+    # Compute SHAP values using the pre-initialized global explainer (fast callable API)
+    shap_values_raw = explainer(X_transformed, check_additivity=False).values
 
-    if isinstance(shap_values_raw, list):
-        customer_shap = shap_values_raw[1][0]
-    elif isinstance(shap_values_raw, np.ndarray) and shap_values_raw.ndim == 3:
+    if isinstance(shap_values_raw, np.ndarray) and shap_values_raw.ndim == 3:
         customer_shap = shap_values_raw[0, :, 1]
     else:
         customer_shap = shap_values_raw[0]
