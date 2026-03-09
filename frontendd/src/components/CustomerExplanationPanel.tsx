@@ -146,7 +146,7 @@ const CustomerExplanationPanel = ({
               Churn Probability
             </p>
             <p className="text-4xl font-bold text-foreground mb-4">
-              {(explanation.churn_probability * 100).toFixed(1)}%
+              {Math.min(explanation.churn_probability * 100, 99.9).toFixed(1)}%
             </p>
             <p className="text-sm text-muted-foreground mb-2">Risk Level</p>
             <span
@@ -168,7 +168,7 @@ const CustomerExplanationPanel = ({
                     : "bg-green-500"
                 }`}
                 style={{
-                  width: `${explanation.churn_probability * 100}%`,
+                  width: `${Math.min(explanation.churn_probability * 100, 99.9)}%`,
                 }}
               />
             </div>
@@ -286,28 +286,77 @@ const CustomerExplanationPanel = ({
           <div className="text-sm text-muted-foreground space-y-2 leading-relaxed max-h-[300px] overflow-y-auto">
             {explanation.ai_explanation.split("\n").map((line, i) => {
               if (!line.trim()) return <div key={i} className="h-2" />;
-              if (line.startsWith("**") && line.endsWith("**")) {
+
+              // Section headers (e.g., "Key factors increasing churn risk:")
+              if (
+                (line.startsWith("**") && line.endsWith("**")) ||
+                /^(Key factors|Protective factors|Recommended retention|Overall)/i.test(line.trim())
+              ) {
                 return (
                   <p key={i} className="font-semibold text-foreground">
                     {line.replace(/\*\*/g, "")}
                   </p>
                 );
               }
-              if (line.startsWith("- **")) {
+
+              // Bullet points: "• **Feature** — description" or "- **Feature** — description"
+              if (line.trimStart().startsWith("•") || line.trimStart().startsWith("- **")) {
                 const content = line
-                  .replace(/^- /, "")
-                  .replace(/\*\*/g, "");
-                const parts = content.split(" — ");
+                  .replace(/^\s*[•-]\s*/, "")
+                  .trim();
+
+                // Split into segments: bold and non-bold
+                const segments: { text: string; bold: boolean }[] = [];
+                let remaining = content;
+                while (remaining.length > 0) {
+                  const boldStart = remaining.indexOf("**");
+                  if (boldStart === -1) {
+                    segments.push({ text: remaining, bold: false });
+                    break;
+                  }
+                  if (boldStart > 0) {
+                    segments.push({ text: remaining.slice(0, boldStart), bold: false });
+                  }
+                  const boldEnd = remaining.indexOf("**", boldStart + 2);
+                  if (boldEnd === -1) {
+                    segments.push({ text: remaining.slice(boldStart + 2), bold: true });
+                    break;
+                  }
+                  segments.push({ text: remaining.slice(boldStart + 2, boldEnd), bold: true });
+                  remaining = remaining.slice(boldEnd + 2);
+                  continue;
+                }
+
                 return (
                   <p key={i} className="pl-2">
-                    <span className="font-medium text-foreground">
-                      • {parts[0]}
-                    </span>
-                    {parts.length > 1 ? ` — ${parts.slice(1).join(" — ")}` : ""}
+                    <span className="mr-1">•</span>
+                    {segments.map((seg, j) =>
+                      seg.bold ? (
+                        <span key={j} className="font-medium text-foreground">{seg.text}</span>
+                      ) : (
+                        <span key={j}>{seg.text}</span>
+                      )
+                    )}
                   </p>
                 );
               }
-              return <p key={i}>{line.replace(/\*\*/g, "")}</p>;
+
+              // Regular paragraph with inline **bold** support
+              const parts = line.split(/(\*\*[^*]+\*\*)/);
+              return (
+                <p key={i}>
+                  {parts.map((part, j) => {
+                    if (part.startsWith("**") && part.endsWith("**")) {
+                      return (
+                        <span key={j} className="font-semibold text-foreground">
+                          {part.slice(2, -2)}
+                        </span>
+                      );
+                    }
+                    return <span key={j}>{part}</span>;
+                  })}
+                </p>
+              );
             })}
           </div>
         ) : (

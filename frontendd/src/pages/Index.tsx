@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import HeroSection from "@/components/HeroSection";
+import HowItWorks from "@/components/HowItWorks";
+import ProductCapabilities from "@/components/ProductCapabilities";
 import FileUpload from "@/components/FileUpload";
 import ProcessingStatus, {
   ProcessingState,
@@ -206,13 +208,23 @@ const Index = () => {
       setResults(predictionResult);
       setProcessingState("completed");
 
-      // Persist state so it survives page navigation
-      sessionStorage.setItem('churnPredictState', JSON.stringify({
-        results: predictionResult,
-        sessionId: newSessionId,
-        filename: file.name,
-        recordsProcessed: predictions.length,
-      }));
+      // Persist state so it survives page navigation (only stats, NOT full data)
+      try {
+        sessionStorage.setItem('churnPredictState', JSON.stringify({
+          results: {
+            totalRecords: predictionResult.totalRecords,
+            churnCount: predictionResult.churnCount,
+            retainCount: predictionResult.retainCount,
+            churnRate: predictionResult.churnRate,
+            data: [],
+          },
+          sessionId: newSessionId,
+          filename: file.name,
+          recordsProcessed: predictions.length,
+        }));
+      } catch {
+        // Storage full — not critical, skip silently
+      }
 
       // Add to history (will store only first 50 rows)
       addToHistory({
@@ -391,7 +403,13 @@ const Index = () => {
       </div>
 
       <main>
-        <HeroSection />
+        <HeroSection onUploadClick={scrollToUpload} />
+
+        {/* How It Works */}
+        <HowItWorks />
+
+        {/* Product Capabilities */}
+        <ProductCapabilities />
 
         {/* Upload Section */}
         <section id="upload" className="py-16 bg-secondary/30">

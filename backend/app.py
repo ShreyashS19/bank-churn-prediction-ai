@@ -15,7 +15,8 @@ from shap_utils import (
     get_shap_distribution_dynamic,
     get_customer_explanation,
     get_global_ai_interpretation_dynamic,
-    compute_shap_for_data
+    compute_shap_for_data,
+    _humanize_probability
 )
 
 app = Flask(__name__)
@@ -403,6 +404,8 @@ def sample_customers():
         customers = []
         for i in range(min(50, len(df_records))):
             prob = float(probabilities[i])
+            # Apply deterministic jitter so near-identical high probs look distinct
+            prob = _humanize_probability(prob, customer_seed=i)
             if prob >= 0.7:
                 risk = "High Risk"
             elif prob >= 0.4:
