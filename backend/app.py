@@ -60,6 +60,65 @@ def _ensure_shap_ready(session, timeout=120):
     if session.get('shap_error'):
         raise RuntimeError(session['shap_error'])
 
+
+def _predict_background(session_id, df, df_model, updated_original_columns):
+    """Run model prediction in batches in a background thread."""
+    session = sessions[session_id]
+    try:
+        batch_size = 500
+        total = len(df_model)
+
+        all_predictions = []
+        all_probabilities = []
+
+        for start in range(0, total, batch_size):
+            end = min(start + batch_size, total)
+            batch = df_model.iloc[start:end]
+
+            preds = model.predict(batch)
+            probs = model.predict_proba(batch)[:, 1]
+
+            all_predictions.extend(['Churn' if p == 1 else 'Not Churn' for p in preds])
+            all_probabilities.extend(probs.tolist())
+
+            session['progress'] = int((end / total) * 100)
+
+        predictions_labels = all_predictions
+
+        df = df.copy()
+        df['Prediction'] = predictions_labels
+        output_columns = updated_original_columns + ['Prediction']
+        df = df[output_columns]
+
+        output_path = 'output_predictions.csv'
+        df.to_csv(output_path, index=False)
+
+        session['result'] = {
+            'predictions': df.to_dict(orient='records'),
+            'csv_path': output_path,
+            'session_id': session_id
+        }
+        session['predictions'] = predictions_labels
+        session['probabilities'] = all_probabilities
+        session['X_data'] = df_model.values
+        session['status'] = 'completed'
+
+        print(f"[Predict] Background prediction finished for session {session_id}")
+
+        # Start SHAP background computation
+        threading.Thread(
+            target=_compute_shap_background,
+            args=(session_id,),
+            daemon=True
+        ).start()
+        print(f"[SHAP] Background thread started for session {session_id}")
+
+    except Exception as e:
+        session['status'] = 'error'
+        session['error'] = str(e)
+        print(f"[Predict] Background prediction FAILED for session {session_id}: {e}")
+
+
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
@@ -94,37 +153,9 @@ def predict():
         # Extract model input data (only required columns) for SHAP computation
         df_model = df[required_columns].copy()
         
-        # Directly predict (pipeline handles preprocessing)
-        predictions = model.predict(df_model)
-        probabilities = model.predict_proba(df_model)[:, 1]
-        predictions_labels = ['Churn' if pred == 1 else 'Not Churn' for pred in predictions]
-        
-        # Store session & start background SHAP computation immediately
         session_id = str(uuid.uuid4())
-        sessions[session_id] = {
-            'shap_computed': False,
-            'shap_error': None,
-            'shap_ready_event': threading.Event(),
-            'shap_values': None,
-            'feature_names': None,
-            'X_data': df_model.values,
-            'X_columns': required_columns,
-            'predictions': predictions_labels,
-            'probabilities': probabilities.tolist(),
-            'df_records': df_model.to_dict(orient='records')
-        }
-        # Fire-and-forget background thread
-        threading.Thread(
-            target=_compute_shap_background,
-            args=(session_id,),
-            daemon=True
-        ).start()
-        print(f"[SHAP] Background thread started for session {session_id}")
         
-        # Add predictions column to full dataframe
-        df['Prediction'] = predictions_labels
-        
-        # Preserve original column order + Prediction at the end
+        # Build the updated columns list for response
         updated_original_columns = []
         for col in original_columns:
             if col in column_mapping:
@@ -132,22 +163,35 @@ def predict():
             else:
                 updated_original_columns.append(col)
         
-        # Reorder columns: original order + Prediction
-        output_columns = updated_original_columns + ['Prediction']
-        df = df[output_columns]
-        
-        # Save output CSV with preserved column order
-        output_path = 'output_predictions.csv'
-        df.to_csv(output_path, index=False)
-        
-        # Response with preserved column order + session_id
-        response = {
-            'predictions': df.to_dict(orient='records'),
-            'csv_path': output_path,
-            'session_id': session_id
+        sessions[session_id] = {
+            'status': 'processing',
+            'progress': 0,
+            'total_records': len(df_model),
+            'result': None,
+            'error': None,
+            'shap_computed': False,
+            'shap_error': None,
+            'shap_ready_event': threading.Event(),
+            'shap_values': None,
+            'feature_names': None,
+            'X_data': None,
+            'X_columns': required_columns,
+            'predictions': [],
+            'probabilities': [],
+            'df_records': df_model.to_dict(orient='records'),
         }
         
-        return jsonify(response)
+        # Start prediction in background thread
+        threading.Thread(
+            target=_predict_background,
+            args=(session_id, df, df_model, updated_original_columns),
+            daemon=True
+        ).start()
+        
+        return jsonify({
+            'session_id': session_id,
+            'total_records': len(df_model)
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -175,6 +219,29 @@ def shap_status():
         'ready': session.get('shap_computed', False),
         'error': session.get('shap_error')
     })
+
+
+@app.route('/predict-progress', methods=['GET'])
+def predict_progress():
+    """Return prediction progress and results when completed."""
+    session_id = request.args.get('session_id')
+    if not session_id or session_id not in sessions:
+        return jsonify({'error': 'Invalid session'}), 400
+
+    session = sessions[session_id]
+
+    response = {
+        'status': session['status'],
+        'progress': session['progress'],
+        'total_records': session.get('total_records', 0),
+    }
+
+    if session['status'] == 'completed' and session.get('result'):
+        response.update(session['result'])
+    elif session['status'] == 'error':
+        response['error'] = session.get('error', 'Unknown error')
+
+    return jsonify(response)
 
 
 # =====================================================

@@ -289,7 +289,7 @@ const ModelInsights = () => {
         <div className="flex justify-center mb-8">
           <div className="inline-flex bg-card border border-border/50 rounded-full p-1 shadow-sm">
             <button
-              onClick={() => (window.location.href = "/")}
+              onClick={() => navigate("/")}
               className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
                 activeTab === "overview"
                   ? "bg-primary text-primary-foreground shadow-sm"

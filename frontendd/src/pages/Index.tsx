@@ -78,15 +78,31 @@ interface PredictionResult {
   data: Array<Record<string, unknown>>;
 }
 
+// Helper to restore persisted prediction state from sessionStorage
+const loadPersistedState = () => {
+  try {
+    const raw = sessionStorage.getItem('churnPredictState');
+    if (raw) return JSON.parse(raw) as {
+      results: PredictionResult;
+      sessionId: string;
+      filename: string;
+      recordsProcessed: number;
+    };
+  } catch { /* ignore corrupted data */ }
+  return null;
+};
+
 const Index = () => {
   const navigate = useNavigate();
+  const persisted = loadPersistedState();
+
   const [processingState, setProcessingState] =
-    useState<ProcessingState>("idle");
-  const [progress, setProgress] = useState(0);
-  const [currentFilename, setCurrentFilename] = useState("");
-  const [results, setResults] = useState<PredictionResult | null>(null);
-  const [recordsProcessed, setRecordsProcessed] = useState(0);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+    useState<ProcessingState>(persisted ? "completed" : "idle");
+  const [progress, setProgress] = useState(persisted ? 100 : 0);
+  const [currentFilename, setCurrentFilename] = useState(persisted?.filename ?? "");
+  const [results, setResults] = useState<PredictionResult | null>(persisted?.results ?? null);
+  const [recordsProcessed, setRecordsProcessed] = useState(persisted?.recordsProcessed ?? 0);
+  const [sessionId, setSessionId] = useState<string | null>(persisted?.sessionId ?? null);
 
   const { history, addToHistory, deleteFromHistory } = usePredictionHistory();
 
@@ -133,17 +149,46 @@ const Index = () => {
       setProgress(40);
       setProcessingState("processing");
 
-      // Call Flask backend API
-      const response = await apiService.predictChurn(parsedData);
-      setProgress(80);
+      // Call Flask backend API - returns immediately with session_id
+      const initResponse = await apiService.predictChurn(parsedData);
+      const newSessionId = initResponse.session_id;
+      setSessionId(newSessionId);
 
-      // Capture session_id for Model Insights
-      if (response.session_id) {
-        setSessionId(response.session_id);
+      // Poll for prediction progress with real-time updates
+      let predictionComplete = false;
+      let finalPredictions: any[] = [];
+
+      while (!predictionComplete) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        const progressRes = await fetch(
+          `${API_BASE_URL}/predict-progress?session_id=${newSessionId}`
+        );
+        const progressData = await progressRes.json();
+
+        if (progressData.status === "error") {
+          throw new Error(progressData.error || "Prediction failed");
+        }
+
+        // Map backend progress (0-100) to frontend progress (40-90)
+        const mappedProgress = 40 + progressData.progress * 0.5;
+        setProgress(mappedProgress);
+        setRecordsProcessed(
+          Math.floor(
+            (progressData.total_records * progressData.progress) / 100
+          )
+        );
+
+        if (progressData.status === "completed") {
+          predictionComplete = true;
+          finalPredictions = progressData.predictions;
+        }
       }
 
+      setProgress(95);
+
       // Process predictions
-      const predictions = response.predictions;
+      const predictions = finalPredictions;
       const churnCount = predictions.filter(
         (record: any) => record.Prediction === "Churn"
       ).length;
@@ -160,6 +205,14 @@ const Index = () => {
       setProgress(100);
       setResults(predictionResult);
       setProcessingState("completed");
+
+      // Persist state so it survives page navigation
+      sessionStorage.setItem('churnPredictState', JSON.stringify({
+        results: predictionResult,
+        sessionId: newSessionId,
+        filename: file.name,
+        recordsProcessed: predictions.length,
+      }));
 
       // Add to history (will store only first 50 rows)
       addToHistory({
@@ -262,6 +315,7 @@ const Index = () => {
     setCurrentFilename("");
     setRecordsProcessed(0);
     setSessionId(null);
+    sessionStorage.removeItem('churnPredictState');
   };
 
   const scrollToUpload = () => {
