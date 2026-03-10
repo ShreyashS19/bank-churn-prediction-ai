@@ -288,10 +288,19 @@ cd bank-churn-prediction-ai
 cd backend
 
 python -m venv venv
+```
 
-# Windows
+**Activate virtual environment:**
+
+```bash
+# Windows CMD
 venv\Scripts\activate
 
+# Windows PowerShell
+.\venv\Scripts\Activate.ps1
+```
+
+```bash
 pip install -r requirements.txt
 
 python app.py
