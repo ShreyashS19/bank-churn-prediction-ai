@@ -4,29 +4,50 @@ const capabilities = [
   {
     icon: Brain,
     title: "Churn Risk Prediction",
-    description:
-      "Predict customers likely to leave using an advanced ExtraTreesClassifier ensemble model trained on real banking data.",
+    description: (
+      <>
+        <strong>Predict customers likely to leave</strong> using an advanced{" "}
+        <strong>ExtraTreesClassifier</strong> <strong>Ensemble Model</strong>{" "}
+        trained on <strong>Real Banking Data</strong>.
+      </>
+    ),
     iconBg: "bg-purple-600",
   },
   {
     icon: Sparkles,
     title: "Explainable AI (SHAP)",
-    description:
-      "Understand which features influence each churn decision with SHAP values — full model transparency.",
+    description: (
+      <>
+        Understand which <strong>features influence</strong> each churn decision
+        with <strong>SHAP values</strong> — enabling full{" "}
+        <strong>model transparency</strong>.
+      </>
+    ),
     iconBg: "bg-blue-600",
   },
   {
     icon: BarChart3,
     title: "Interactive Analytics",
-    description:
-      "Explore churn patterns through dynamic visual dashboards with feature importance and distribution analysis.",
+    description: (
+      <>
+        Explore <strong>churn patterns</strong> through{" "}
+        <strong>dynamic visual dashboards</strong> with{" "}
+        <strong>feature importance</strong> and{" "}
+        <strong>distribution analysis</strong>.
+      </>
+    ),
     iconBg: "bg-emerald-600",
   },
   {
     icon: MessageSquare,
     title: "AI-Generated Insights",
-    description:
-      "Automatically get human-readable summaries of churn drivers and actionable retention strategies.",
+    description: (
+      <>
+        Automatically generate <strong>human-readable insights</strong> about{" "}
+        <strong>churn drivers</strong> and{" "}
+        <strong>actionable retention strategies</strong>.
+      </>
+    ),
     iconBg: "bg-orange-500",
   },
 ];

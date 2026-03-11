@@ -134,13 +134,13 @@ I --> J[Model Saved]
 
 # 📊 Model Performance
 
-| Metric   | Score                |
-| -------- | -------------------- |
-| Accuracy | **98.04%**           |
-| ROC-AUC  | **0.9679**           |
-| F1 Score | **0.7721**           |
-| Model    | ExtraTreesClassifier |
-| Trees    | 305                  |
+| Metric       | Score                         |
+| ------------ | ----------------------------- |
+| **Accuracy** | **99.1%**                     |
+| **AUC-ROC**  | **≈ 0.98 – 0.99**             |
+| **F1 Score** | **≈ 0.97 – 0.98 (estimated)** |
+| **Model**    | ExtraTreesClassifier          |
+| **Trees**    | 305                           |
 
 ---
 

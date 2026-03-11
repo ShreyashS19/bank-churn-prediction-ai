@@ -3,7 +3,9 @@ import { Activity, BarChart3, FlaskConical, TreePine } from "lucide-react";
 interface ModelMetrics {
   accuracy: number;
   roc_auc: number;
+  roc_auc_display?: string;
   f1_score: number;
+  f1_display?: string;
   model: string;
   estimators: number;
 }
@@ -25,14 +27,14 @@ const ModelMetricsCards = ({ metrics, loading }: ModelMetricsCardsProps) => {
     {
       icon: BarChart3,
       label: "AUC-ROC",
-      value: metrics ? metrics.roc_auc.toFixed(2) : "—",
+      value: metrics ? (metrics.roc_auc_display ?? metrics.roc_auc.toFixed(2)) : "—",
       subtitle: "Area under curve",
       color: "text-green-400",
     },
     {
       icon: FlaskConical,
       label: "F1 Score",
-      value: metrics ? metrics.f1_score.toFixed(2) : "—",
+      value: metrics ? (metrics.f1_display ?? metrics.f1_score.toFixed(2)) : "—",
       subtitle: "Harmonic mean",
       color: "text-purple-400",
     },
