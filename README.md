@@ -1,5 +1,3 @@
-
-
 # 🧠 AI-Powered Bank Customer Churn Prediction
 
 > Predict customer churn using **Machine Learning + Explainable AI + LLM Insights** with an **interactive full-stack analytics dashboard**.

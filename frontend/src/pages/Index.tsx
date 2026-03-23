@@ -24,6 +24,9 @@ import {
 
 // Direct API calls - bypassing the problematic apiService.ts import
 const API_BASE_URL = "http://localhost:5000";
+const ANALYSIS_STATUS_KEY = "churnAnalysisStatus";
+
+type AnalysisStatus = "idle" | "processing" | "completed";
 
 const apiService = {
   async predictChurn(csvData: Array<Record<string, unknown>>) {
@@ -94,6 +97,17 @@ const loadPersistedState = () => {
   return null;
 };
 
+const setAnalysisStatus = (status: AnalysisStatus, activeSessionId: string | null = null) => {
+  try {
+    sessionStorage.setItem(
+      ANALYSIS_STATUS_KEY,
+      JSON.stringify({ status, sessionId: activeSessionId })
+    );
+  } catch {
+    // Best effort persistence only.
+  }
+};
+
 const Index = () => {
   const navigate = useNavigate();
   const persisted = loadPersistedState();
@@ -105,6 +119,10 @@ const Index = () => {
   const [results, setResults] = useState<PredictionResult | null>(persisted?.results ?? null);
   const [recordsProcessed, setRecordsProcessed] = useState(persisted?.recordsProcessed ?? 0);
   const [sessionId, setSessionId] = useState<string | null>(persisted?.sessionId ?? null);
+  const isInsightsLocked = processingState !== "completed" || !sessionId;
+  const insightsLockTooltip = processingState === "processing" || processingState === "uploading"
+    ? "Complete analysis to view model insights"
+    : "Upload a CSV file first to unlock Model Insights";
 
   const { history, addToHistory, deleteFromHistory } = usePredictionHistory();
 
@@ -113,6 +131,8 @@ const Index = () => {
     setProcessingState("uploading");
     setProgress(0);
     setResults(null);
+    setSessionId(null);
+    setAnalysisStatus("processing", null);
 
     try {
       // Validate file
@@ -155,6 +175,7 @@ const Index = () => {
       const initResponse = await apiService.predictChurn(parsedData);
       const newSessionId = initResponse.session_id;
       setSessionId(newSessionId);
+      setAnalysisStatus("processing", newSessionId);
 
       // Poll for prediction progress with real-time updates
       let predictionComplete = false;
@@ -207,6 +228,7 @@ const Index = () => {
       setProgress(100);
       setResults(predictionResult);
       setProcessingState("completed");
+      setAnalysisStatus("completed", newSessionId);
 
       // Persist state so it survives page navigation (only stats, NOT full data)
       try {
@@ -243,6 +265,7 @@ const Index = () => {
     } catch (error) {
       console.error("Error processing file:", error);
       setProcessingState("error");
+      setAnalysisStatus("idle", null);
 
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
@@ -327,6 +350,7 @@ const Index = () => {
     setCurrentFilename("");
     setRecordsProcessed(0);
     setSessionId(null);
+    setAnalysisStatus("idle", null);
     sessionStorage.removeItem('churnPredictState');
   };
 
@@ -384,21 +408,33 @@ const Index = () => {
           >
             Overview
           </button>
-          {sessionId ? (
-            <button
-              onClick={() => navigate(`/model-insights?session=${sessionId}`)}
-              className="px-6 py-2 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground transition-all duration-300"
-            >
+          <button
+            type="button"
+            disabled={isInsightsLocked}
+            aria-disabled={isInsightsLocked}
+            aria-label={
+              isInsightsLocked
+                ? "Model Insights is locked until analysis is complete"
+                : "Open Model Insights"
+            }
+            tabIndex={isInsightsLocked ? -1 : 0}
+            title={isInsightsLocked ? insightsLockTooltip : "Open Model Insights"}
+            onClick={() => {
+              if (!isInsightsLocked && sessionId) {
+                navigate(`/model-insights?session=${sessionId}`);
+              }
+            }}
+            className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+              isInsightsLocked
+                ? "text-muted-foreground/40 cursor-not-allowed opacity-60"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+            }`}
+          >
+            <span className="inline-flex items-center gap-2">
               Model Insights
-            </button>
-          ) : (
-            <span
-              className="px-6 py-2 rounded-full text-sm font-medium text-muted-foreground/40 cursor-not-allowed transition-all duration-300"
-              title="Upload a CSV file first to unlock Model Insights"
-            >
-              Model Insights 🔒
+              {isInsightsLocked && <span aria-hidden="true">🔒</span>}
             </span>
-          )}
+          </button>
         </div>
       </div>
 
