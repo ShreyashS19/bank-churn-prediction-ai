@@ -1,9 +1,11 @@
+
+
 {
-  "accuracy": 0.991,
-  "roc_auc": 0.985,
-  "roc_auc_display": "0.98",
-  "f1_score": 0.975,
-  "f1_display": "\u2248 0.97 ",
+  "accuracy": 0.9571,
+  "roc_auc": 0.915,
+  "roc_auc_display": "0.91",
+  "f1_score": 0.9571,
+  "f1_display": "0.96",
   "model": "ExtraTrees",
   "estimators": 305
 }

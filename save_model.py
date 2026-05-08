@@ -30,7 +30,7 @@ new_names = [
 ]
 data.rename(columns=dict(zip(old_names, new_names)), inplace=True)
 
-# Select relevant features (drop Clientnum, Naive_Bayes cols, Avg_Open_To_Buy)
+# Select relevant features (drop Clientnum, Naive_Bayes cols)
 features = [
     'Age', 'Gender', 'Dependent_count', 'Education', 'Marital_Status', 'Income',
     'Card_Category', 'Months_on_book', 'Total_Relationship_Count',
@@ -101,7 +101,7 @@ metrics = {
 with open('backend/model_metrics.json', 'w') as f:
     json.dump(metrics, f, indent=2)
 
-print(f"📊 Metrics — Accuracy: {acc:.4f}, AUC-ROC: {roc:.4f}, F1: {f1:.4f}")
+print(f" Metrics — Accuracy: {acc:.4f}, AUC-ROC: {roc:.4f}, F1: {f1:.4f}")
 
 # -----------------------------
 # Retrain on full data for production model
@@ -116,7 +116,7 @@ joblib.dump(pipeline, 'backend/model.pkl')
 # -----------------------------
 # Compute SHAP values
 # -----------------------------
-print("🔍 Computing SHAP values (this may take a moment)...")
+print(" Computing SHAP values (this may take a moment)...")
 
 # Transform data through preprocessing (without SMOTE)
 X_transformed = pipeline.named_steps['preprocessing'].transform(X)
@@ -193,7 +193,7 @@ with open('backend/shap_values.pkl', 'wb') as f:
 with open('backend/feature_names.json', 'w') as f:
     json.dump(original_feature_names, f)
 
-print(f"✅ SHAP values computed for {sample_size} samples")
+print(f" SHAP values computed for {sample_size} samples")
 
 # -----------------------------
 # Save example input/output
@@ -208,4 +208,4 @@ example_output['Prediction'] = [
 ]
 example_output.to_csv('backend/example_output.csv', index=False)
 
-print("✅ Model training complete. Model, metrics, and SHAP data saved in backend/")
+print(" Model training complete. Model, metrics, and SHAP data saved in backend/")
