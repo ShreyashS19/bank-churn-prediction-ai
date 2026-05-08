@@ -68,39 +68,6 @@ O --> P[LLM Business Interpretation]
 
 ---
 
-# 🔄 Data Processing Flow
-
-```mermaid
-flowchart TD
-
-A[Upload CSV] --> B[Frontend Validation]
-
-B --> C[POST /predict]
-
-C --> D[Backend Preprocessing]
-
-D --> E[ML Pipeline]
-
-E --> F[Model Prediction]
-
-F --> G[Return Predictions]
-
-F --> H[Background SHAP Computation]
-
-H --> I["/shap-status Polling"]
-
-I --> J[Feature Importance]
-
-I --> K[SHAP Distribution]
-
-I --> L[Customer Explanation]
-
-J --> M[Insights Dashboard]
-K --> M
-L --> M
-```
-
----
 
 # 🧠 Machine Learning Pipeline
 
