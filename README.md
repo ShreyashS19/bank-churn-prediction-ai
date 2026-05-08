@@ -102,8 +102,8 @@ I --> J[Model Saved]
 | Metric       | Score                         |
 | ------------ | ----------------------------- |
 | **Accuracy** | **95.1%**                     |
-| **AUC-ROC**  | **≈ 0.98 – 0.99**             |
-| **F1 Score** | **≈ 0.97 – 0.98 (estimated)** |
+| **AUC-ROC**  | **≈ 0.91**                    |
+| **F1 Score** | **≈ 0.96 (estimated)**        |
 | **Model**    | ExtraTreesClassifier          |
 | **Trees**    | 305                           |
 
